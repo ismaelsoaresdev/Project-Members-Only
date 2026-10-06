@@ -10,14 +10,12 @@ require("dotenv").config();
 
 const app = express();
 
-// Motor de templates
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
 
-// Middleware para processar dados de formulário
 app.use(express.urlencoded({ extended: false }));
+app.use(express.static(path.join(__dirname, "public")));
 
-// Configuração da Sessão
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "cats",
@@ -26,7 +24,6 @@ app.use(
   })
 );
 
-// Passport: Configuração da Estratégia Local
 passport.use(
   new LocalStrategy(async (username, password, done) => {
     try {
@@ -63,18 +60,13 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-// Inicialização do Passport nas Sessões
 app.use(passport.session());
 
-// Middleware para passar o utilizador atual para todas as views
 app.use((req, res, next) => {
   res.locals.currentUser = req.user;
   next();
 });
 
-// --- ROTAS ---
-
-// Rota Inicial (Home)
 app.get("/", async (req, res, next) => {
   try {
     const { rows } = await pool.query(`
@@ -94,12 +86,10 @@ app.get("/", async (req, res, next) => {
   }
 });
 
-// Rota GET: Formulário de Registo
 app.get("/sign-up", (req, res) => {
   res.render("sign-up-form", { title: "Sign Up - Clubhouse" });
 });
 
-// Validação do Registo
 const validateSignUp = [
   body("first_name").trim().notEmpty().withMessage("First name is required."),
   body("last_name").trim().notEmpty().withMessage("Last name is required."),
@@ -122,7 +112,6 @@ const validateSignUp = [
   }),
 ];
 
-// Rota POST: Processar Registo
 app.post("/sign-up", validateSignUp, async (req, res, next) => {
   const errors = validationResult(req);
 
@@ -155,12 +144,10 @@ app.post("/sign-up", validateSignUp, async (req, res, next) => {
   }
 });
 
-// Rota GET: Formulário de Login
 app.get("/log-in", (req, res) => {
   res.render("log-in-form", { title: "Log In - Clubhouse" });
 });
 
-// Rota POST: Processar Login
 app.post(
   "/log-in",
   passport.authenticate("local", {
@@ -169,7 +156,6 @@ app.post(
   })
 );
 
-// Rota GET: Logout
 app.get("/log-out", (req, res, next) => {
   req.logout((err) => {
     if (err) return next(err);
@@ -177,15 +163,12 @@ app.get("/log-out", (req, res, next) => {
   });
 });
 
-// Regras de validação para a mensagem
 const validateMessage = [
   body("title").trim().notEmpty().withMessage("Title is required."),
   body("text").trim().notEmpty().withMessage("Message text is required."),
 ];
 
-// Rota GET: Mostrar o formulário de nova mensagem
 app.get("/new-message", (req, res) => {
-  // Proteção: apenas utilizadores autenticados podem ver o formulário
   if (!req.user) {
     return res.redirect("/log-in");
   }
@@ -193,7 +176,6 @@ app.get("/new-message", (req, res) => {
   res.render("new-message", { title: "Create New Message - Clubhouse" });
 });
 
-// Rota POST: Processar e guardar a mensagem na BD
 app.post("/new-message", validateMessage, async (req, res, next) => {
   if (!req.user) {
     return res.redirect("/log-in");
@@ -210,7 +192,6 @@ app.post("/new-message", validateMessage, async (req, res, next) => {
   }
 
   try {
-    // Insere a mensagem associada ao id do utilizador autenticado (req.user.id)
     await pool.query(
       "INSERT INTO messages (title, text, user_id) VALUES ($1, $2, $3)",
       [req.body.title, req.body.text, req.user.id]
@@ -222,14 +203,11 @@ app.post("/new-message", validateMessage, async (req, res, next) => {
   }
 });
 
-// GET Join Club Form
 app.get("/join-club", (req, res) => {
-  // Se o utilizador não estiver logado, redireciona para o login
   if (!req.user) {
     return res.redirect("/log-in");
   }
 
-  // Se já for membro, redireciona para a home
   if (req.user.membership_status) {
     return res.redirect("/");
   }
@@ -237,7 +215,6 @@ app.get("/join-club", (req, res) => {
   res.render("join-club", { title: "Join the Club - Clubhouse" });
 });
 
-// POST Join Club Form
 app.post("/join-club", async (req, res, next) => {
   if (!req.user) {
     return res.redirect("/log-in");
@@ -245,7 +222,6 @@ app.post("/join-club", async (req, res, next) => {
 
   const secretPasscode = process.env.CLUB_PASSCODE || "odin";
 
-  // Se a senha estiver errada, renderiza novamente com mensagem de erro
   if (req.body.passcode !== secretPasscode) {
     return res.render("join-club", {
       title: "Join the Club - Clubhouse",
@@ -254,7 +230,6 @@ app.post("/join-club", async (req, res, next) => {
   }
 
   try {
-    // Atualiza a coluna membership_status para true na BD para o utilizador atual
     await pool.query(
       "UPDATE users SET membership_status = true WHERE id = $1",
       [req.user.id]
@@ -266,7 +241,6 @@ app.post("/join-club", async (req, res, next) => {
   }
 });
 
-// Middleware para verificar se o utilizador é Administrador
 function isAdmin(req, res, next) {
   if (req.user && req.user.is_admin) {
     return next();
@@ -274,7 +248,6 @@ function isAdmin(req, res, next) {
   res.status(403).send("Access denied. Admin privileges required.");
 }
 
-// Rota POST: Apagar mensagem (protegida pelo middleware isAdmin)
 app.post("/message/:id/delete", isAdmin, async (req, res, next) => {
   try {
     await pool.query("DELETE FROM messages WHERE id = $1", [req.params.id]);
@@ -284,8 +257,8 @@ app.post("/message/:id/delete", isAdmin, async (req, res, next) => {
   }
 });
 
-// Servidor
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
