@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+</head>
+<body>
+  <h1>Join the Club</h1>
+  <p>Enter the secret passcode to become an official club member!</p>
+
+  <% if (locals.error) { %>
+    <p style="color: red;"><%= error %></p>
+  <% } %>
+
+  <form action="/join-club" method="POST">
+    <div>
+      <label for="passcode">Secret Passcode:</label>
+      <input type="password" id="passcode" name="passcode" required>
+    </div>
+
+    <button type="submit">Join Club</button>
+  </form>
+
+  <p><a href="/">Back to Home</a></p>
+</body>
+</html>

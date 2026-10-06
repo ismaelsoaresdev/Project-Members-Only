@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+</head>
+<body>
+  <h1>Welcome to Clubhouse</h1>
+
+  <% if (currentUser) { %>
+    <h2>Welcome back, <%= currentUser.first_name %> <%= currentUser.last_name %>!</h2>
+    <p><strong>Membership Status:</strong> <%= currentUser.membership_status ? "Club Member" : "Non-Member" %></p>
+    
+    <% if (!currentUser.membership_status) { %>
+      <p><a href="/join-club">Enter Secret Code to Become a Member</a></p>
+    <% } %>
+
+    <p><a href="/new-message">Create a New Message</a> | <a href="/log-out">Log Out</a></p>
+  <% } else { %>
+    <p>You are not logged in.</p>
+    <p>
+      <a href="/sign-up">Sign Up</a> | 
+      <a href="/log-in">Log In</a>
+    </p>
+  <% } %>
+
+  <hr>
+
+ <h2>Clubhouse Feed</h2>
+
+  <% if (messages && messages.length > 0) { %>
+    <% messages.forEach(message => { %>
+      <div style="border: 1px solid #ccc; padding: 12px; margin-bottom: 12px; border-radius: 6px;">
+        <h3><%= message.title %></h3>
+        <p><%= message.text %></p>
+        
+        <% if (currentUser && currentUser.membership_status) { %>
+          <p><small><strong>Author:</strong> <%= message.first_name %> <%= message.last_name %> (@<%= message.username %>)</small></p>
+          <p><small><strong>Date:</strong> <%= new Date(message.timestamp).toLocaleString() %></small></p>
+        <% } else { %>
+          <p><small><strong>Author:</strong> <em>Anonymous (Members Only)</em></small></p>
+          <p><small><strong>Date:</strong> <em>Hidden (Members Only)</em></small></p>
+        <% } %>
+
+        
+        <% if (currentUser && currentUser.is_admin) { %>
+          <form action="/message/<%= message.id %>/delete" method="POST" style="margin-top: 10px;">
+            <button type="submit" onclick="return confirm('Are you sure you want to delete this message?');" style="color: red;">
+              Delete Message
+            </button>
+          </form>
+        <% } %>
+      </div>
+    <% }) %>
+  <% } else { %>
+    <p>No messages posted yet.</p>
+  <% } %>
+</body>
+</html>
